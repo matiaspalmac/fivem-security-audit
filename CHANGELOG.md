@@ -33,3 +33,8 @@ First release under the `fivem-security-audit` name (relaunch of the former `fiv
 
 ### Validation
 - `examples/` corpus: `vulnerable_shop` + `secure_shop` with `EXPECTED.md` oracle (repo-only, excluded from the npm package).
+
+### Post-release intel syncs
+- Expanded Blum/Warden IOC domain set + Cipher markers; synced with `dei_security_scanner`.
+- **M.2i Native-invoke evasion** — `Citizen.InvokeNative`/`GetNative` by-hash detection guidance.
+- txAdmin / operator hardening recommendations (port, Cfx.re ID + 2FA, reverse proxy, token rotation).
