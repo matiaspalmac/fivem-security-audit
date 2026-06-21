@@ -171,6 +171,16 @@ Escrow-aware: `.fxap`/encrypted source is reported as **UNAUDITED**, never a cle
 - **Modular architecture** — progressive check loading for context window efficiency
 - **Persistence mechanism detection** — sessionmanager injection, temp markers, OS-level
 
+## Dei FiveM Toolkit — build → audit → protect
+
+| Stage | Tool | Role |
+|-------|------|------|
+| **Build** | [fivem-resource-builder](https://github.com/matiaspalmac/fivem-resource-builder) | scaffold secure-by-default resources |
+| **Audit** | [fivem-security-audit](https://github.com/matiaspalmac/fivem-security-audit) | static review before deploy (CI gate) |
+| **Protect** | [dei_security_scanner](https://github.com/matiaspalmac/dei_security_scanner) | runtime detection + blocking in-server |
+
+This skill is the **audit** stage: run it on the diff before merge/deploy (0 CRITICAL gate). Build with the builder, protect at runtime with the scanner — all three share the same 2025-2026 threat intel.
+
 ## License
 
 MIT License - Dei
