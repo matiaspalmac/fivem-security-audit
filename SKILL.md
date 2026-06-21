@@ -30,12 +30,13 @@ The `$mode` argument selects which phases run (default `full`):
 
 | `$mode` | Phases run |
 |---------|-----------|
-| `full` (default / empty) | All phases (1, 1b, 2, 3, 4) |
+| `full` (default / empty) | All phases (1, 1b, 2, 3, 4, 5) |
 | `security` | Phase 1 only (`checks/security.md`) |
 | `malware` | Phase 1b only (`checks/malware.md`) |
 | `performance` | Phase 2 only (`checks/performance.md`) |
 | `cleanup` | Phase 3 only (`checks/cleanup.md`) |
 | `compatibility` | Phase 4 only (`checks/compatibility.md`) |
+| `architecture` | Phase 5 only (`checks/architecture.md`) — code quality/architecture grade |
 
 When a single-phase mode is selected, skip the other phases and their report sections, but ALWAYS keep the Audit Rules and self-review. If `$mode` is unrecognized, treat it as `full`.
 
@@ -60,6 +61,7 @@ When a single-phase mode is selected, skip the other phases and their report sec
    - **Phase 2: Performance** — refer to `checks/performance.md`
    - **Phase 3: Cleanup** — refer to `checks/cleanup.md`
    - **Phase 4: Compatibility** — refer to `checks/compatibility.md`
+   - **Phase 5: Architecture & Code Quality** — refer to `checks/architecture.md` (senior-grade structure review, library-agnostic; quality grade, does NOT affect the security gate)
 6. Output structured report with findings
 7. Offer auto-fix options
 
@@ -134,6 +136,20 @@ Date: YYYY-MM-DD | Type: [Detected] | Score: X/100
 | GlobalState beacons (miauss/ggWP) | YES/NO |
 | Exfiltration channels (webhook/telegram) | YES/NO |
 | Persistence mechanisms | YES/NO |
+
+## Architecture & Code Quality (Phase 5 — quality grade, NOT the security gate)
+Grade: A–F
+| Area | Status |
+|------|--------|
+| Module system / no globals | PASS/WARN/FAIL |
+| Typing & LSP (.luarc, annotations) | PASS/WARN/FAIL |
+| Async (no busy-wait, callbacks, non-blocking DB) | PASS/WARN/FAIL |
+| State sync (statebags vs broadcast loops) | PASS/WARN/FAIL |
+| NUI build & typed contract (if UI) | PASS/WARN/FAIL/NA |
+| Manifest & tooling | PASS/WARN/FAIL |
+
+Top upgrades (file:line + pattern to adopt). Library-agnostic: standalone is fine; only
+flag missing structure/typing/efficiency, never the absence of a specific library.
 
 ## What's Done Well
 - (list confirmed good practices)
