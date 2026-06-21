@@ -1,0 +1,26 @@
+<!-- TEST FIXTURE — hardened NUI. Origin-checked, textContent (no XSS), intent-only callback. -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+</head>
+<body>
+  <div id="log"></div>
+  <script>
+    window.addEventListener('message', function (e) {
+      if (e.origin !== 'https://' + GetParentResourceName()) return; // origin check
+      document.getElementById('log').textContent = String(e.data.message); // no innerHTML
+    });
+
+    function buy(item, qty) {
+      // intent only — no price sent; server is authoritative
+      fetch(`https://${GetParentResourceName()}/buy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item: String(item), qty: Number(qty) })
+      });
+    }
+  </script>
+</body>
+</html>

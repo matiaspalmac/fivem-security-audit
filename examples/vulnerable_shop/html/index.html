@@ -1,0 +1,22 @@
+<!-- TEST FIXTURE — intentionally insecure. See ../EXPECTED.md. Do NOT deploy. -->
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+  <div id="log"></div>
+  <script>
+    window.addEventListener('message', function (e) {
+      // BUG[SEC-1.5]: no e.origin check; renders server/player data as raw HTML (XSS)
+      document.getElementById('log').innerHTML = e.data.message;
+    });
+
+    function buy(item, price) {
+      // BUG[SEC-1.10]: callback sends price from the NUI (client-authoritative)
+      fetch(`https://${GetParentResourceName()}/buy`, {
+        method: 'POST',
+        body: JSON.stringify({ item: item, price: price })
+      });
+    }
+  </script>
+</body>
+</html>
