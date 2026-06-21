@@ -46,6 +46,7 @@ When a single-phase mode is selected, skip the other phases and their report sec
 - **Distinguish CONFIRMED (code path verified) from SUSPECTED (pattern detected, context unclear).**
 - **After completing the audit, self-review: remove any finding you cannot re-confirm from the code.**
 - **Never speculate about code you have not opened.** Read the file before reporting.
+- **Escrow-protected files cannot be audited.** If a resource is escrowed (`.fxap` present, encrypted/unreadable source, or `lua54 'yes'` + vendor protection), report those files as **UNAUDITED — escrow-protected**, never as a clean pass. You can only audit unencrypted files and the manifest.
 
 ## Audit Workflow
 

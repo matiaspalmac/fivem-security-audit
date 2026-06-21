@@ -38,3 +38,6 @@ First release under the `fivem-security-audit` name (relaunch of the former `fiv
 - Expanded Blum/Warden IOC domain set + Cipher markers; synced with `dei_security_scanner`.
 - **M.2i Native-invoke evasion** — `Citizen.InvokeNative`/`GetNative` by-hash detection guidance.
 - txAdmin / operator hardening recommendations (port, Cfx.re ID + 2FA, reverse proxy, token rotation).
+- Anti-dump vs backdoor disambiguation (own-server loader vs external C2).
+- Escrow handling: `.fxap`/encrypted files reported as UNAUDITED (4.7).
+- RedM (rdr3) support: VORP / RSG / RedEM frameworks, RDR3 natives (4.8).

@@ -144,7 +144,10 @@ Compound risks (SQLi + no rate limit, backdoor indicators, token grabbers, suppl
 | QBox (ox_core) | Ox.GetPlayer, ox_inventory, migration gap detection |
 | ox_lib | lib.callback, lib.zones, lib.cache, MySQL wrapper |
 | ND_Core | Event safety model, identifier exposure |
+| RedM (VORP / RSG / RedEM) | rdr3 game, same server-authority model, RDR3 natives |
 | Standalone | ACE permissions, native FiveM APIs |
+
+Escrow-aware: `.fxap`/encrypted source is reported as **UNAUDITED**, never a clean pass.
 
 ## Features (v1.0)
 

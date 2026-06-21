@@ -118,3 +118,26 @@ If `lua54` is NOT set (Lua 5.1 mode):
 [ ] Circular dependencies avoided
 [ ] Minimum resource version specified if API changed between versions
 ```
+
+## 4.7 Escrow & Asset Protection (MEDIUM)
+
+FiveM/RedM Asset Escrow encrypts source into `.fxap`; escrowed files are **unreadable** to a static audit and to runtime scanners (`LoadResourceFile` returns nothing usable).
+
+```
+[ ] If `.fxap` present / source encrypted → report escrowed files as UNAUDITED, not "clean"
+[ ] escrow_ignore directive lists the files that SHOULD remain readable (config, locales) — audit those
+[ ] lua54 'yes' is required for escrow (its absence on a "protected" resource is suspicious)
+[ ] Entitlement: resource needs the buyer's CFX account; a leaked/cracked escrow (decrypted source where escrow is expected) is a piracy/tamper red flag
+[ ] Trust boundary: an escrowed resource is only as safe as its vendor — recommend buying from the official Tebex/keymaster, not leak sites
+```
+
+## 4.8 RedM (rdr3) Support (LOW)
+
+Same engine and security model as FiveM; the checks in this skill apply unchanged.
+
+```
+[ ] game 'rdr3' for RedM resources
+[ ] Framework detection covers VORP (vorp_core), RSG (rsg-core, QBCore-derived), RedEM
+[ ] Server authority, event validation, and dupe rules identical to FiveM (VORP inventory exploits are documented)
+[ ] RDR3 natives differ from GTA5 — verify native names against the RDR3 natives DB, not the GTA5 set
+```
