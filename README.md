@@ -1,6 +1,7 @@
 # FiveM Security Audit
 
 [![npm](https://img.shields.io/npm/v/fivem-security-audit)](https://www.npmjs.com/package/fivem-security-audit)
+[![downloads](https://img.shields.io/npm/dm/fivem-security-audit)](https://www.npmjs.com/package/fivem-security-audit)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 A Claude Code skill that reviews a FiveM or RedM resource the way an attacker would read it, then hands you a report you can act on. Backdoors, dupes, SQL injection, NUI exploits, crash vectors, performance leaks. It reads the code, quotes the exact line, and tells you how to fix it.
@@ -26,6 +27,28 @@ Or just ask: "audit this resource", "scan this script for backdoors", "is this s
 **Performance and stability.** Wasteful `Wait(0)` threads, uncached natives, N+1 queries, leaked streaming assets, missing `playerDropped` and `onResourceStop` cleanup, all measured against real resmon budgets.
 
 Every finding carries a confidence level, a file and line, the exploit, and a copy-paste fix. The report ends with a score out of 100 and a hard gate: any unresolved critical means not production ready.
+
+## What a report looks like
+
+```
+# FiveM Audit Report — fancy_shop
+Date: 2026-06-21 | Type: Economy | Score: 38/100
+
+## Summary
+CRITICAL 3 | HIGH 2 | MEDIUM 1
+
+### [CRITICAL] [SEC-1.10] Client-controlled price trusted by server
+- Confidence: CONFIRMED
+- File: server/main.lua:24
+- Issue: buy event uses the price sent by the client
+- Exploit: a cheat menu fires shop:buy with price = -100000 to mint money
+- Fix:
+    local item = Config.Items[itemId]   -- server-authoritative
+    if not item then return end
+    local total = item.price * qty
+
+Verdict: NOT production ready — 3 unresolved CRITICAL.
+```
 
 ## Coverage
 
