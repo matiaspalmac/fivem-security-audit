@@ -20,6 +20,8 @@ Or just ask: "audit this resource", "scan this script for backdoors", "is this s
 
 ## What it looks for
 
+**Where the file came from.** The dominant way a backdoor reaches a server is not a zero-day — it is a leaked or cracked paid script that someone repacked with a loader before releasing it for free. The audit starts by establishing provenance and a trust tier, because a clean read of an untrusted file is a weak guarantee and the report should say so rather than stamping it clean.
+
 **Malware and backdoors.** Remote code execution, the Cipher and Blum/Warden families, obfuscation (hex, XOR, base64, Luraph, JScrambler), token grabbers, Discord and Telegram exfiltration, supply-chain injection into txAdmin and build files, known C2 domains and IPs. It knows the difference between a real backdoor and a legitimate anti-dump loader.
 
 **Your build chain.** Modern resources ship a compiled React bundle nobody reads, built on hundreds of npm packages. The audit covers the bundle and the dependency manifest — install scripts, lockfiles, typosquats — and reports a minified bundle shipped without source as unaudited rather than clean.
@@ -28,7 +30,11 @@ Or just ask: "audit this resource", "scan this script for backdoors", "is this s
 
 **Performance and stability.** Wasteful `Wait(0)` threads, uncached natives, N+1 queries, leaked streaming assets, missing `playerDropped` and `onResourceStop` cleanup, all measured against real resmon budgets and the whole-server frame budget.
 
+**Player data.** Logging is a data-handling surface, not a feature. The biggest FiveM player-data incident of 2026 came from ordinary resources doing ordinary logging into a central sink that was left reachable — so webhooks, log tables, identifiers and IP handling get audited like any other outbound flow.
+
 **Platform posture.** The server-side controls that actually stop the crash and trust exploits — `sv_stateBagStrictMode`, entity lockdown, the full state-bag rate-limiter set — and a GTA V Enhanced migration pass for what breaks when you move off Legacy.
+
+It also tells you what it *cannot* see. A semantic audit is not a signature sweep and not a runtime monitor; the report names which questions need a different instrument instead of implying it covered them.
 
 Every finding carries a confidence level, a file and line, the exploit, and a copy-paste fix. The report ends with a score out of 100 and a hard gate: any unresolved critical means not production ready.
 

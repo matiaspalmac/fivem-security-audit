@@ -2,6 +2,47 @@
 
 All notable changes to `fivem-security-audit`.
 
+## [1.2.0] — 2026-09-04
+
+Adds the context the previous versions audited without: **where the file came from**, and **what
+happens to player data**. Both came out of reviewing what the rest of the ecosystem's tooling does
+and does not do.
+
+### Added
+- **Phase 0 — Provenance & Trust (`checks/provenance.md`, new).** Runs before any code is read.
+  Establishes origin, assigns a trust tier (T1/T2/T3/unknown), and looks for repack and crack
+  indicators: stripped escrow, altered fxmanifest paths (escrow integrity keys off exact paths),
+  grafted code style, orphan files, removed vendor license checks. Includes a purpose/capability
+  mismatch check — "this is a speedometer that reads `mysql_connection_string`" is worth more than
+  any signature. New `provenance` audit mode.
+  Rationale: independent sources agree the dominant backdoor delivery vector is a leaked/nulled/
+  cracked paid script repacked with a loader, not a novel exploit. Origin predicts risk better than
+  any single pattern, and no amount of pattern matching recovers it afterwards.
+- **Provenance gate on the verdict.** A T3 resource that scans clean is reported as *"no backdoor
+  found"*, never *"clean"* — a high score on an untrusted artifact is explicitly not a safety claim.
+- **Security 1.13b — Player Data, Logging & Privacy.** Motivated by the Jan–Feb 2026 FiveM
+  incident (~64.6k usernames and IP addresses; Spanish/LATAM communities worst affected), which
+  came from centralized logging left reachable rather than from a backdoor. Covers identifier and
+  IP minimization, webhook placement and volume, `setr` webhook leakage, log sink retention and
+  access control, and cross-server aggregation as the amplifier.
+- **"Know What This Method Misses"** in SKILL.md — an explicit comparison of semantic review vs
+  pattern/entropy scanners vs runtime monitors, with the recommendation to triage large or
+  untrusted trees with a bulk scanner first. The audit no longer implies full-tree signature
+  coverage it does not have.
+- Build target and provenance now appear in the report header.
+
+### Changed
+- **M.10 blocklist reframed as an accelerator, not the test.** Hardcoded domain lists are stale
+  from the day they are written and dedicated tools ship far larger ones. Replaced
+  "not on the list, therefore fine" with allowlist reasoning: every external endpoint needs an
+  identifiable legitimate purpose, and an unrecognized one is suspect because it is unrecognized.
+- **QBCore: ACE over job strings.** Community examples gate admin actions on
+  `PlayerData.job.name == 'admin'`; that is a job check, not a permission check, and anything that
+  can set a job inherits admin. Now flagged (MEDIUM, HIGH for destructive actions). Added nil-check
+  on `GetPlayer`, calling-resource validation on exports, and load-order guard checks.
+- **1.17**: noted that the source of the two largest commercial anti-cheats has circulated on leak
+  forums, and that "the server runs an AC" is never accepted as mitigating a script-level finding.
+
 ## [1.1.0] — 2026-09-04
 
 Threat-intel and platform refresh. The FiveM platform moved (GTA V Enhanced early access,

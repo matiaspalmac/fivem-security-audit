@@ -187,7 +187,19 @@ if #(coords - targetPos) > 10.0 then return end
 [ ] Player.PlayerData.job checked server-side via GetPlayer
 [ ] QBCore.Functions.CreateUseableItem validated server-side
 [ ] No direct Player.Functions.SetMoney from client events
+[ ] GetPlayer result nil-checked before use — PlayerData structure is not guaranteed to exist
+    (a dropped/loading player returns nil; unchecked indexing is both a crash and a bypass)
+[ ] Server exports validate the CALLING resource, not just the arguments
+[ ] Load-order assumptions do not create a window where a handler is live before its permission
+    source is ready (dependency declared in fxmanifest; guard early events)
 ```
+
+**Admin authorization — ACE over job strings.** Community QBCore examples commonly gate admin
+actions on `PlayerData.job.name == 'admin'` and a grade level. That is a *job* check, not a
+permission check: anyone who can set a job (another exploitable event, a rogue admin menu, a
+database edit) inherits admin. Prefer `IsPlayerAceAllowed(src, 'group.admin' / 'resource.action')`,
+which is framework-agnostic and cannot be reached by in-game economy/job logic. Flag job-string
+admin gating as MEDIUM (HIGH if the action is destructive: ban, money, item spawn).
 
 **QBox (ox_core):**
 ```
@@ -297,6 +309,36 @@ not-yet-streamed entity silently stops running. Flag it as a migration break, no
 [ ] Config files with secrets listed in server_scripts only
 ```
 
+## 1.13b Player Data, Logging & Privacy (HIGH)
+
+Not every breach is a backdoor. The largest FiveM player-data incident of 2026 (disclosed Jan–Feb,
+~64.6k usernames and IP addresses, Spanish/LATAM communities worst hit) came from **centralized
+logging left accessible** — ordinary resources doing ordinary logging, aggregated and unprotected.
+Audit logging as a data-handling surface, not as a feature.
+
+```
+[ ] Resource logs the MINIMUM identifying data needed. Player name for a moderation log is
+    defensible; license/steam/discord identifiers, IP addresses, and coordinates usually are not
+[ ] IP addresses never logged or forwarded without an explicit, stated reason
+[ ] GetPlayerEndpoint / GetPlayerIdentifiers output not sent off-server (see M.3 for the
+    exfiltration case; this check covers the WELL-INTENTIONED version of the same data flow)
+[ ] Discord webhooks: server-side only, URL in a convar (`set`, never `setr`), never in a shared
+    or client file, never committed to the repo
+[ ] Webhook volume bounded — a webhook fired per action per player is a permanent external PII
+    store the operator does not control and cannot delete from
+[ ] Log sinks (DB tables, files, webhooks, external HTTP) have an access-control and retention
+    story; unbounded `dei_*_logs`-style tables growing forever are both a privacy and a disk issue
+[ ] Player data written to a SHARED/central sink across multiple servers is isolated per server —
+    aggregation is what turned the 2026 incident from local to mass
+[ ] No player data in publicly readable locations (web-served directories, NUI-accessible files)
+[ ] Chat/PM content not logged verbatim unless the operator explicitly requires it
+```
+
+**Convar hygiene reminder:** a webhook URL set with `setr` is readable by every connected client
+via the F8 console — same failure mode as the `mysql_connection_string` case in 1.2/M.3. Anyone who
+reads it can post arbitrary content to the operator's log channel, or simply harvest whatever the
+server posts there.
+
 ## 1.14 Business Logic (MEDIUM)
 
 ```
@@ -344,7 +386,9 @@ Cheat menus with a built-in Lua executor (Eulen, redENGINE, Lynx, TZX, Hammafia)
 
 ## 1.17 Anti-Cheat Coverage Map (defense-in-depth)
 
-Server owners commonly run a runtime anti-cheat (FiveGuard, WaveShield, PhoenixAC, ElectronAC, FiniAC, VenusAC, PegasusAC, SecureServe, RavenAC, etc.). These are **complementary**, not a substitute for secure code. Two reasons: (1) most are signature/behavioral and several have leaked source in decrypted form on cheat forums, so cheaters build targeted bypasses; (2) they monitor client memory cheats the server cannot fix in script.
+Server owners commonly run a runtime anti-cheat (FiveGuard, WaveShield, PhoenixAC, ElectronAC, FiniAC, VenusAC, PegasusAC, SecureServe, RavenAC, etc.). These are **complementary**, not a substitute for secure code. Two reasons: (1) most are signature/behavioral and several have leaked source in decrypted form on cheat forums — including the two largest commercial ones, whose source has circulated on leak forums — so cheaters build targeted bypasses against the exact detection logic; (2) they monitor client memory cheats the server cannot fix in script.
+
+Corollary for the report: never treat "server runs $AC" as mitigating a script-level finding. The AC's detection code may be in the hands of the people it is detecting; your server-side validation is not.
 
 Split every cheat category by who owns the fix:
 
