@@ -8,4 +8,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node .github/validate.mjs
+      - name: Validate skill frontmatter and package
+        run: node .github/validate.mjs
+
+      - name: Validate checks, corpus and SKILL.md consistency
+        run: node .github/oracle-check.mjs

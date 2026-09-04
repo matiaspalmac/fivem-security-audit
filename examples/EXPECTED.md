@@ -1,5 +1,12 @@
 # Expected Audit Results — validation oracle
 
+> **Partly automated.** `node .github/oracle-check.mjs` (run in CI) verifies that every finding
+> promised below resolves to a real section in `checks/`, that the fixture contains a `BUG[<ID>]`
+> marker for it, that `secure_shop` carries no bug markers at all, and that SKILL.md still agrees
+> with the `checks/` directory and its own mode list. That catches renumbering and orphaned
+> examples. It cannot judge whether the *audit itself* found the issue — for that, run the skill
+> and compare against the tables below.
+
 Use this to verify the skill is working. Run the skill in each fixture directory and compare.
 
 ```
