@@ -14,6 +14,10 @@ MUST exist if the server script maintains any per-player state. Missing cleanup 
 [ ] Cleans temporary permission grants
 [ ] Cleans any player-indexed cache or state
 [ ] Uses `source` inside handler (not a variable from outer scope)
+[ ] Connection-phase state cleaned too — queue slots, deferral/pending-auth entries and
+    capture cooldowns keyed by a connecting player. These leak differently: a player who
+    ABANDONS the connection may never reach `playerDropped`, so a queue table that is only
+    cleaned there grows forever and eventually holds phantom slots (see security 1.20)
 ```
 
 Pattern:

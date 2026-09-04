@@ -185,6 +185,33 @@ Use it to name the actual hot function rather than guessing which loop is heavy.
 
 Report the worst offenders with their measured/estimated ms, not just a pass/fail.
 
+## 2.0 Server Thread Blocking (CRITICAL — read this before the client checks)
+
+**The server runs one main thread.** Any resource that holds it stalls every other resource and
+every player. This is the single highest-severity performance defect and it doubles as a DoS
+vector, so it is checked first and reported as CRITICAL, not as an optimization.
+
+```
+[ ] No loop without a yield on the SERVER side — `while true do ... end` with no `Wait` hangs the
+    server, it does not merely slow it
+[ ] No synchronous/blocking DB call on a hot path — use oxmysql `.await` inside a thread or the
+    callback form; never busy-wait on a result
+[ ] No unbounded iteration over client-supplied data (a table size cap is a performance control as
+    well as a security one — see security 1.1/1.19)
+[ ] No `string.rep`, `table.concat` or JSON encode/decode over client-controlled size (memory bomb)
+[ ] Lua pattern matching not run over attacker-controlled strings of unbounded length
+[ ] Recursive functions bounded (stack exhaustion)
+[ ] Per-tick server work bounded; heavy jobs moved to intervals, queues or events
+```
+
+**How the operator sees this:** a `server thread hitch warning` names the offending resource in the
+FXServer console / txAdmin. Repeated or multi-second hitches mean blocking work — almost always an
+unyielding Lua loop or a slow query. Cite the warning as the confirmation signal when recommending
+a fix, and when a resource is suspected, bisect by stopping resources and re-adding with `ensure`.
+
+**Why it is also a security finding:** an event handler that loops proportionally to a client-sent
+value gives any player a one-line server freeze. Cross-reference security 1.19.
+
 ## 2.8 Platform-Level Performance Levers (server config, not code)
 
 These are outside the resource but belong in the report when the audit touches a whole server —

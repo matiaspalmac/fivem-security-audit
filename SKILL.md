@@ -90,6 +90,8 @@ When a single-phase mode is selected, skip the other phases and their report sec
 | **Vehicle** | vehicle, plate, spawn | Dupes, Entity ownership, Entities |
 | **Job** | job, onDuty, society | Perms, Events, Proximity |
 | **Inventory** | item, inventory, slot | Dupes, ox_inventory, Concurrent access |
+| **Connection** | playerConnecting, deferrals, queue, whitelist, ban | Deferral termination, multi-identifier bans, connect-spam DoS (1.20) |
+| **Logging/Report** | webhook, screenshot, log, report | Player-data minimization, webhook placement, capture gating (1.13b, 1.21) |
 
 ---
 
@@ -137,6 +139,15 @@ Reference copy for diff: YES/NO | Repack indicators: none / [list]
 |---------|--------|----------------|
 | playerDropped | YES/NO | X/Y |
 | onResourceStop | YES/NO | X/Y states |
+
+## Player Data Handling (only if the resource logs, captures or forwards player data)
+| Item | Status |
+|------|--------|
+| Identifiers / IPs logged | none / minimal / excessive |
+| Webhook location | server-only / shared / client |
+| Webhook convar | `set` / `setr` (leaks to clients) / hardcoded |
+| Capture (screenshot) upload | server-proxied / client-side (URL exposed) / NA |
+| Log sink retention & access control | defined / undefined |
 
 ## Backdoor & Malware Scan
 | Indicator | Found |

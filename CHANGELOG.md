@@ -29,7 +29,36 @@ and does not do.
   pattern/entropy scanners vs runtime monitors, with the recommendation to triage large or
   untrusted trees with a bulk scanner first. The audit no longer implies full-tree signature
   coverage it does not have.
+- **Security 1.20 — Connection Phase & Deferrals.** Previously uncovered entirely. Rejecting
+  connections with no `license` identifier, multi-identifier ban matching (a single-identifier ban
+  is defeated by any HWID spoofer), `deferrals.done()` on every branch including DB-error paths,
+  unescaped player names in `presentCard`, ban-before-queue ordering, and connect-spam as an
+  amplification vector.
+- **Security 1.21 — Screenshot & Media Capture.** `requestScreenshotUpload` performs the POST from
+  the NUI layer, so a client-side upload hands every player the destination URL and any key.
+  Requires server-proxied upload, ACE gating and rate limiting, and notes that a modified client can
+  return a forged frame — screenshots are supporting evidence, never proof.
+- **Performance 2.0 — Server Thread Blocking (CRITICAL).** The server has one main thread; an
+  unyielding loop or a synchronous query hangs it rather than slowing it. Covers memory bombs
+  (`string.rep`, string growth, JSON over client-controlled size), unbounded iteration over client
+  data, and using the `server thread hitch warning` as the confirmation signal. Doubles as a DoS
+  finding when the loop bound is attacker-controlled.
+- **Compatibility 4.8 (RedM) expanded** from four lines to framework-specific checks: VORP
+  server-side item/inventory validation and split-stack atomicity, character-id forgery,
+  RSG inheriting every QBCore pitfall, and cross-framework inventory grafts.
+- Cleanup 3.1: connection-phase state (queue slots, pending auth) leaks differently — a player who
+  abandons the connection may never reach `playerDropped`.
+- Report format: Player Data Handling table; Connection and Logging/Report resource types.
 - Build target and provenance now appear in the report header.
+
+### Repo / tooling
+- `bin/install.js` no longer hardcodes "v1.0" in the banner and feature list — both now read from
+  `package.json`, so the installer stops advertising a stale version.
+- `examples/` corpus extended to exercise the new checks: `vulnerable_shop/server/connect.lua`
+  (deferrals, connection logging, client-side capture upload, unbounded server loop, client-trusted
+  state bag) with a hardened `secure_shop/server/connect.lua` counterpart. `EXPECTED.md` gains the
+  new expected findings, Phase 0 provenance expectations, and an explicit false-positive trap table
+  so over-flagging the secure fixture is caught as a regression.
 
 ### Changed
 - **M.10 blocklist reframed as an accelerator, not the test.** Hardcoded domain lists are stale

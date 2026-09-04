@@ -62,7 +62,12 @@ Why: encapsulation, testability, no namespace pollution. The #1 quality lever.
 [ ] Typed Lua<->NUI contract (useNuiEvent/fetchNui style), shared interfaces
 [ ] A browser dev/mock path so the UI builds without launching the game
 [ ] Build output committed for drag-n-drop release; source present (not minified-only)
+[ ] Lockfile committed so the build is reproducible; dependency count proportionate to the UI
+[ ] node_modules NOT committed
 ```
+> Where these overlap with trust rather than quality — a bundle with no source, an install script,
+> a compromised dependency — they are a **security** finding under `checks/malware.md` M.15, not a
+> quality one. Report them there; this phase only judges maintainability.
 
 ## 5.8 Manifest & structure (LOW)
 ```

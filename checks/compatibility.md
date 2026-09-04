@@ -144,14 +144,33 @@ FiveM/RedM Asset Escrow encrypts source into `.fxap`; escrowed files are **unrea
 
 ## 4.8 RedM (rdr3) Support (LOW)
 
-Same engine and security model as FiveM; the checks in this skill apply unchanged.
+Same engine and security model as FiveM; every check in this skill applies unchanged. RedM is not
+a lighter threat environment — it is a smaller one, with less scrutiny per resource.
 
 ```
 [ ] game 'rdr3' for RedM resources
 [ ] Framework detection covers VORP (vorp_core), RSG (rsg-core, QBCore-derived), RedEM
-[ ] Server authority, event validation, and dupe rules identical to FiveM (VORP inventory exploits are documented)
-[ ] RDR3 natives differ from GTA5 — verify native names against the RDR3 natives DB, not the GTA5 set
+[ ] RDR3 natives differ from GTA5 — verify native names against the RDR3 natives DB, not the GTA5
+    set. A GTA5 native name that "looks right" may not exist on rdr3
+[ ] Server authority, event validation and dupe rules identical to FiveM (1.1, 1.3, 1.10, 1.16)
 ```
+
+**Framework-specific:**
+```
+[ ] VORP: item/inventory manipulation validated SERVER-side — public write-ups exist demonstrating
+    inventory item exploitation against the framework's own callbacks; do not assume core handles it
+[ ] VORP: character/user data fetched by server source, never by a client-sent character id
+    (VORP is multi-character by default — the character id is an obvious forgery target)
+[ ] VORP inventory operations that split, stack or move items are atomic and locked (split-stack
+    handling is the documented dupe surface)
+[ ] RSG: it is QBCore-derived — every QBCore pitfall in security 1.9 applies verbatim, including
+    ACE-over-job-string admin gating
+[ ] Inventory resource is the framework's matching one (a VORP inventory is not an RSG inventory);
+    a cross-framework graft is both a break and a validation gap
+```
+
+**Reporting note:** when auditing RedM, state the framework explicitly. "Works on RedM" is not a
+finding; "uses a GTA5-only native" and "trusts a client-sent character id" are.
 
 ## 4.9 GTA V Enhanced Migration (HIGH — the big 2026 platform split)
 

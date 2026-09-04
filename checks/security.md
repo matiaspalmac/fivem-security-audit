@@ -450,3 +450,56 @@ crash vectors are patched platform-side. State that explicitly rather than imply
 audit covers it.
 
 References: [Cfx state bags](https://docs.fivem.net/docs/scripting-manual/networking/state-bags/), [state bag rate-limit issue #2361](https://github.com/citizenfx/fivem/issues/2361), [scenario crash #3675](https://github.com/citizenfx/fivem/issues/3675), [server commands / convars](https://docs.fivem.net/docs/server-manual/server-commands/).
+
+## 1.20 Connection Phase & Deferrals (HIGH — the door, not the room)
+
+`playerConnecting` and the deferrals flow run **before** the player exists as a normal source. Bans,
+queues, whitelists and identifier checks all live here, and a mistake means either everyone gets in
+or nobody does. Audit any resource that hooks this phase (queue, whitelist, ban, anticheat, loading).
+
+```
+[ ] Connection REJECTED when the player has no `license` (and ideally no `fivem`) identifier —
+    without a traceable identity there is nothing to ban later
+[ ] Ban/whitelist lookups match on MULTIPLE identifiers, not one. A single-identifier ban is
+    defeated by any HWID spoofer; combine license + fivem + discord + Cfx token + IP history
+[ ] Identifier read server-side via GetPlayerIdentifiers(src) — never accepted from the client
+[ ] Every deferral path terminates: `deferrals.done()` or `deferrals.done(reason)` on EVERY branch,
+    including error/exception paths. A DB error that skips `done()` hangs the connection forever
+[ ] Async work inside deferrals is awaited/guarded with a timeout — a stalled query becomes a
+    server-wide "cannot connect"
+[ ] `deferrals.update` / `presentCard` content does not interpolate unescaped player-supplied text
+    (name/discord nick) — adaptive cards render it
+[ ] Ban check happens BEFORE the queue grants a slot (not after), so banned players cannot occupy
+    queue capacity
+[ ] Queue priority is derived server-side from a stored identifier, never from anything the client
+    sends
+[ ] Connection handlers are rate-limit/DoS aware — connection spam runs this code path; heavy DB
+    work per attempt is an amplification vector
+[ ] No duplicate-connection race: same license connecting twice handled deterministically (1.14)
+[ ] Deferral errors are logged server-side, not surfaced to the client with internal detail
+```
+
+**Operator note worth including in the report:** when banning through txAdmin, banning from the
+player's profile page captures more identifiers than banning from history after they have
+disconnected. Single-identifier bans are the reason "the cheater came back in five minutes."
+
+## 1.21 Screenshot & Media Capture (MEDIUM–HIGH)
+
+Admin panels, report systems and anticheats commonly use `screenshot-basic` or a fork. Two distinct
+problems, both common:
+
+```
+[ ] Upload is PROXIED THROUGH THE SERVER — `requestScreenshotUpload` performs the HTTP POST from
+    the NUI layer to whatever URL it is given, so a client-side upload puts the destination URL and
+    any API key in the hands of every player
+[ ] No webhook URL / API key / bearer token passed to the client for the upload
+[ ] Upload endpoint not attacker-substitutable (client cannot choose where the image goes)
+[ ] Capture is rate-limited and permission-gated server-side (it is a remote camera into a player's
+    machine — treat unrestricted capture as a privacy problem, not a feature)
+[ ] Captured media handled under the same rules as any other player data (1.13b): retention,
+    access control, no public directory
+```
+
+**Evidence caveat for the report:** a modified client can intercept the NUI call and return a blank
+or forged frame. Screenshots are supporting evidence, never proof on their own — flag any ban/report
+flow that treats a returned image as conclusive.
