@@ -80,6 +80,30 @@ and does not do.
   (-15), authoritative state trusted from client KVP (-8). New HTTP/API and Server JS resource
   types and three new malware-scan report rows.
 
+- **Security 1.3 — Lua 5.4 integer wraparound as a dupe primitive.** `lua54 'yes'` is near-universal
+  and 64-bit integer overflow wraps silently (two's complement, no error, no clamp). A
+  server-authoritative price times a validated-positive quantity still mints money when the product
+  wraps negative, because the balance check passes and removing a negative amount adds. Requires
+  upper bounds before the multiply and a post-condition guard.
+- **Security 1.24 — Discord Integration & External Identity.** Bot token must use `set`, never
+  `setr`; widely repeated setup guides recommend `setr`, which replicates the token to every client,
+  so it should be treated as already compromised and rotated. Plus minimal bot permissions,
+  server-side role resolution, cached lookups, and **failing closed** on API error or rate limit —
+  fail-open is a whitelist bypass an attacker can induce by exhausting the rate limit.
+- UNAUDITED rule extended to compiled .NET assemblies.
+
+### Positioning / docs
+- **README rewritten around what this actually is: a reviewer, not a scanner.** The space is full of
+  free pattern/entropy scanners; the differentiator is reasoning about reachability and trust, not
+  list size. Leads with the question the tool answers, then a worked example of a finding no scanner
+  can produce (the Lua 5.4 wraparound dupe — every checklist item passes and it still mints money),
+  a phase table, the provenance argument, the honest limitations table, and a list of concrete
+  things the checks encode that most operators do not know.
+- **CONTRIBUTING rewritten** for a threat-intel project: repo layout, an evidence standard (cite
+  sources; never assert convar names or version numbers from memory — a previous release shipped
+  `sv_enableDevtools`, which does not exist), the four-part format required for a new detection
+  (pattern, exploit, fix, false-positive guard), fixture requirements, and a no-live-malware rule.
+
 ### Repo / tooling
 - `bin/install.js` no longer hardcodes "v1.0" in the banner and feature list — both now read from
   `package.json`, so the installer stops advertising a stale version.
