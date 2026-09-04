@@ -240,6 +240,16 @@ dupe-relevant history — check the shipped version, not the README:
 Flag any resource vendoring/bundling its own copy of ox_inventory (or pinning `2.47.0`–`2.47.5`) as
 HIGH — a stale embedded copy is a dupe waiting to happen.
 
+**`ox_lib` also carries a security floor:** a crash vulnerability exploitable to crash *nearby
+players*, leaving no server-side trace, was fixed in the maintained line. Griefing with no logs is
+easy to misdiagnose as instability — if players report random crashes near specific individuals,
+check the ox_lib version before hunting the resource.
+
+> **Version numbers do not compare across trees.** The ox resources exist in an active
+> `overextended` tree and an archived `CommunityOx` fork whose numbering diverged. Establish which
+> tree the deployed copy came from before citing any floor, and check the repository at review time
+> rather than trusting a number from memory — see `checks/compatibility.md` 4.6a.
+
 Reference: [ox_inventory security](https://github.com/overextended/ox_inventory/security), [releases](https://github.com/overextended/ox_inventory/releases), [coxdocs server functions](https://coxdocs.dev/ox_inventory/Functions/Server).
 
 ## 1.10 NUI Callback Trust (CRITICAL)
@@ -503,3 +513,56 @@ problems, both common:
 **Evidence caveat for the report:** a modified client can intercept the NUI call and return a blank
 or forged frame. Screenshots are supporting evidence, never proof on their own — flag any ban/report
 flow that treats a returned image as conclusive.
+
+## 1.22 Resource HTTP Handlers (CRITICAL — internet-facing, and usually forgotten)
+
+`SetHttpHandler` registers an HTTP endpoint served by the **server's own HTTP listener**, reachable
+at `http://<server>:30120/<resourceName>/<path>`. That is the game port — it must be open TCP+UDP
+for players to connect, and it already serves `/info.json`, `/players.json` and `/dynamic.json`
+publicly. **Anything a resource exposes through `SetHttpHandler` is on the public internet**, with
+no authentication and no rate limiting unless the resource implements them itself.
+
+Treat every handler as an unauthenticated public API endpoint on a game server.
+
+```
+[ ] Handler AUTHENTICATES the caller — shared secret / bearer token / HMAC, compared in constant
+    time, with the secret in a convar (`set`, never `setr`) and never in client or shared files
+[ ] Authorization is not based on `request.address` alone (source IP is trivially spoofed on
+    UDP-adjacent infra and wrong behind any proxy/CDN)
+[ ] Request `path` is validated against a whitelist — never concatenated into a filesystem path
+    (`LoadResourceFile`/`io.open`) or a shell/SQL string. Path traversal (`..`, encoded variants)
+    explicitly rejected
+[ ] Request body size-capped via `setDataHandler` before parsing; `json.decode` in pcall
+[ ] `setCancelHandler` used so an aborted request does not leak a pending operation
+[ ] Handler does NO privileged action (ban, money, ACE grant, resource restart, SQL write) without
+    authentication — an unauthenticated admin endpoint here is an instant full compromise
+[ ] Per-address rate limiting (the endpoint is reachable by anyone who knows the server IP)
+[ ] Responses do not leak player identifiers, IPs, tokens, config or internal errors (1.13b)
+[ ] Handler work is bounded and non-blocking — a slow handler holds the server thread (perf 2.0)
+[ ] Endpoint existence is intentional: a debug/test handler left in a release is a finding
+```
+
+**Discovery note for the report:** handlers are enumerable by resource name, and resource names are
+not secret. Do not accept "nobody knows the URL" as a control — that is the same obscurity argument
+rejected in 1.16.
+
+## 1.23 Client-Side Storage Trust (HIGH)
+
+`SetResourceKvp` / `GetResourceKvp` on the **client** writes to the player's own machine. The player
+can read and modify it. It is a preferences store, not a security boundary.
+
+```
+[ ] No authoritative state in client KVP — money, inventory, job, permissions, unlock/purchase
+    flags, cooldowns, ban state. All of these must live server-side
+[ ] Server never reads back a client KVP value and trusts it (client sends it via an event; that is
+    just client input — validate per 1.1)
+[ ] Client KVP limited to genuinely local preferences: theme, HUD position, scale, keybinds,
+    last-used tab, volume
+[ ] No secrets in client KVP (tokens, webhook URLs, API keys) — it is plaintext on disk
+[ ] Anti-cheat / cooldown / "already claimed" markers not stored client-side (trivially cleared)
+[ ] Server-side KVP used deliberately: it is real persistence, but it is not a database — check for
+    unbounded growth and for data that belongs in SQL
+```
+
+Legitimate example (do NOT flag): a HUD storing `{theme, scale, positions}` in client KVP.
+Finding: a shop storing `purchased_vip = true` in client KVP and honoring it later.

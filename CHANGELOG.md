@@ -51,6 +51,35 @@ and does not do.
 - Report format: Player Data Handling table; Connection and Logging/Report resource types.
 - Build target and provenance now appear in the report header.
 
+- **Security 1.22 — Resource HTTP Handlers (CRITICAL).** `SetHttpHandler` serves
+  `http://<server>:30120/<resource>/<path>` on the server's own HTTP listener — the game port, which
+  is necessarily public and already serves `/info.json` and `/players.json`. Every handler is an
+  unauthenticated internet-facing endpoint unless the resource says otherwise. Covers constant-time
+  secret comparison, `request.address` not being an authorization signal, path traversal into
+  `LoadResourceFile`, body size caps, per-address rate limiting, and debug handlers left in
+  releases. Resource-name obscurity is explicitly rejected as a control.
+- **Security 1.23 — Client-Side Storage Trust.** Client `SetResourceKvp` is on the player's disk
+  and is player-writable: it is a preferences store, never a boundary. Flags authoritative state
+  (purchases, permissions, cooldowns, "already claimed" markers) and secrets stored there, with a
+  legitimate-use example so HUD preference storage is not flagged.
+- **Malware M.15d — Server-side JavaScript (CRITICAL).** A NUI bundle runs in CEF; a server JS
+  resource does not. FiveM runs Node on the server, `require` resolves from the resource's own
+  `node_modules/`, and that code holds server-process privileges — a compromised dependency there is
+  RCE that already happened, so M.15b applies at CRITICAL rather than MEDIUM. Adds JS equivalents of
+  the Lua backdoor primitives (`child_process`, `vm`, `eval`, dynamic `require`) and the
+  **Node 16.x default runtime** (long EOL) with the `node_version '22'` manifest opt-in.
+- **Compatibility 4.6a — Dependency maintenance status.** A pinned version is only safe while
+  someone still ships fixes for it. The ox resources changed hands: `overextended/*` is active and
+  shipped the 2026 fixes, while the `CommunityOx/*` fork and its whole organization were
+  **archived 2026-04-28** and are read-only, with numbering that diverged from upstream. A resource
+  pinned to or vendoring the archived fork is on an unmaintained tree. The skill is instructed to
+  check the repository at review time rather than asserting a cross-tree version floor from memory.
+- ox_lib now carries a noted security floor (a fix for a crash exploitable against *nearby players*
+  that leaves no server-side trace — easily misread as instability).
+- Scoring: unauthenticated privileged HTTP handler (-20), unreviewed server-JS dependency tree
+  (-15), authoritative state trusted from client KVP (-8). New HTTP/API and Server JS resource
+  types and three new malware-scan report rows.
+
 ### Repo / tooling
 - `bin/install.js` no longer hardcodes "v1.0" in the banner and feature list — both now read from
   `package.json`, so the installer stops advertising a stale version.

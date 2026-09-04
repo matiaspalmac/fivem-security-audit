@@ -127,6 +127,36 @@ If `lua54` is NOT set (Lua 5.1 mode):
 [ ] Minimum resource version specified if API changed between versions
 ```
 
+### 4.6a Dependency maintenance status (MEDIUM — check the upstream is alive)
+
+A pinned version is only safe while somebody is still shipping fixes for it. Verify at review time
+that each third-party dependency's upstream is **maintained**, and which org the deployed copy
+actually came from.
+
+```
+[ ] Upstream repo not archived / abandoned. An archived dependency means the current version is the
+    LAST version — a future vulnerability has no patch, only a migration
+[ ] The deployed copy's origin org matches the maintained tree (see below)
+[ ] Version pins are current against the tree the resource is actually on, and advisories are
+    checked at review time rather than assumed from a version number in a README
+```
+
+**ox ecosystem specifically — verify before citing a version floor.** These resources are de-facto
+dependencies for much of the ecosystem and they have changed hands, so version numbers do NOT
+compare across trees:
+
+- `overextended/*` — active, and the tree that has shipped 2026 fixes (e.g. ox_inventory 2.47.x).
+- `CommunityOx/*` — a fork created to maintain the resources after the original team archived them;
+  the **organization and its repositories were archived on 2026-04-28 and are read-only**. Its
+  version numbering diverged from upstream, so a "v3.32.1" style pin refers to that fork's line, not
+  to overextended's.
+
+Audit action: identify which tree the deployed `ox_lib` / `ox_inventory` / `ox_target` / `ox_core`
+came from. **A resource pinned to or vendoring the archived fork is on an unmaintained tree** —
+report it as MEDIUM (HIGH if it is `ox_inventory`, given its dupe history) and recommend moving to
+the maintained upstream. Do not assert a cross-tree version floor from memory; check the actual
+repository at review time.
+
 ## 4.7 Escrow & Asset Protection (MEDIUM)
 
 FiveM/RedM Asset Escrow encrypts source into `.fxap`; escrowed files are **unreadable** to a static audit and to runtime scanners (`LoadResourceFile` returns nothing usable).

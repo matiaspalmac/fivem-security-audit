@@ -94,6 +94,8 @@ When a single-phase mode is selected, skip the other phases and their report sec
 | **Inventory** | item, inventory, slot | Dupes, ox_inventory, Concurrent access |
 | **Connection** | playerConnecting, deferrals, queue, whitelist, ban | Deferral termination, multi-identifier bans, connect-spam DoS (1.20) |
 | **Logging/Report** | webhook, screenshot, log, report | Player-data minimization, webhook placement, capture gating (1.13b, 1.21) |
+| **HTTP/API** | SetHttpHandler, `/resource/path` endpoints | Auth, path traversal, rate limit — it is on the public game port (1.22) |
+| **Server JS** | `server_script '*.js'`, node_modules, package.json | Dependency tree at CRITICAL severity, Node version, `child_process` (M.15d) |
 
 ---
 
@@ -168,6 +170,9 @@ Reference copy for diff: YES/NO | Repack indicators: none / [list]
 | NUI bundle shipped without source | YES/NO/NA |
 | npm install scripts (postinstall/preinstall/prepare) | YES/NO/NA |
 | Lockfile present & dependencies clean | YES/NO/NA |
+| Server-side JS + node_modules (full server privileges) | YES/NO/NA |
+| Public HTTP handler without auth (`SetHttpHandler`) | YES/NO/NA |
+| Dependency upstream archived / unmaintained | YES/NO/UNKNOWN |
 
 ## Platform Posture (report when a full server, not just one resource, is in scope)
 | Item | Status |
@@ -306,6 +311,9 @@ Compound risk (once per combination):
 - Supply chain (sessionmanager/system modification): -20
 - txAdmin monitor injection marker present (helpEmptyCode / onServerResourceFail / RESOURCE_EXCLUDE): -20
 - Malicious/compromised npm dependency or install script reaching the shipped bundle: -20
+- Unauthenticated `SetHttpHandler` endpoint performing a privileged action (public game port): -20
+- Server-side JS resource whose dependency tree is unreviewed/unpinned: -15
+- Authoritative state trusted from client KVP (purchase, permission, cooldown flag): -8
 - State bag / event flood with no size cap (server-crash DoS): -10
 - Sensitive server action reachable with no server-side auth (cheat-menu trivially exploitable): -10
 - Vendored ox_inventory below 2.47.6 (known dupe): -8
