@@ -1,10 +1,10 @@
 ---
 name: fivem-security-audit
-description: "Performs comprehensive FiveM resource security, performance, and compatibility audits. Detects backdoors, RATs, SQL injection, event exploitation, NUI vulnerabilities, dupes, crash/DoS vectors, npm and build-chain supply chain attacks, and malware patterns across ESX, QBCore, QBox, ox_lib, and ND_Core frameworks, on both GTA V Legacy and Enhanced builds. Use whenever a FiveM/cfx resource is being reviewed — even if not explicitly asked — including: audit FiveM script, review FiveM security, optimize FiveM resource, check FiveM performance, FiveM code review, review Lua script security, audit ESX resource, audit QBCore resource, audit QBox resource, check for exploits, FiveM vulnerability scan, GTA V Enhanced migration check, or resmon optimization."
+description: "Performs comprehensive FiveM resource security, performance, and compatibility audits. Detects backdoors, RATs, SQL injection, event exploitation, NUI vulnerabilities, dupes, crash/DoS vectors, npm and build-chain supply chain attacks, and malware patterns across ESX, QBCore, QBox, ox_lib, and ND_Core frameworks, on both GTA V Legacy and Enhanced builds. Use whenever a FiveM/cfx resource is being reviewed — even if not explicitly asked — including: audit FiveM script, review FiveM security, optimize FiveM resource, check FiveM performance, FiveM code review, review Lua script security, audit ESX resource, audit QBCore resource, audit QBox resource, check for exploits, FiveM vulnerability scan, GTA V Enhanced migration check, resmon optimization, or asking whether a leaked, cracked, nulled or unknown-origin script is safe to run."
 argument-hint: "[full|provenance|security|malware|performance|cleanup|compatibility|architecture]"
 arguments: [mode]
 effort: max
-allowed-tools: Read, Grep, Glob, Bash(wc *), Bash(ls *)
+allowed-tools: Read, Grep, Glob, Bash(wc *), Bash(ls *), Bash(git diff *), Bash(git log *), Bash(git status *)
 license: MIT
 metadata:
   author: Dei
@@ -49,6 +49,8 @@ When a single-phase mode is selected, skip the other phases and their report sec
 - **After completing the audit, self-review: remove any finding you cannot re-confirm from the code.**
 - **Never speculate about code you have not opened.** Read the file before reporting.
 - **Escrow-protected files cannot be audited.** If a resource is escrowed (`.fxap` present, encrypted/unreadable source, or `lua54 'yes'` + vendor protection), report those files as **UNAUDITED — escrow-protected**, never as a clean pass. You can only audit unencrypted files and the manifest.
+- **The same rule applies to any code you cannot actually read**: a minified NUI bundle shipped without source, or a tree too large to cover. Report it as **UNAUDITED**, name the files, and never let unread code be implied as clean. UNAUDITED is a separate line in the report, not a deduction and not a pass.
+- **State your confidence honestly at the end.** "No backdoor found" is a different claim from "clean", and on an untrusted or partly-unreadable resource it is the only one you can make.
 
 ## Audit Workflow
 
@@ -258,7 +260,7 @@ question needs instead of over-claiming.
 
 | Method | Catches | Blind to |
 |--------|---------|----------|
-| **This skill** (semantic) | Logic flaws with no malicious string at all: dupes, races, missing server-side authorization, TOCTOU, trust-boundary errors. Purpose/capability mismatch. *Why* a pattern is or is not dangerous in context | Anything it does not read: escrowed, minified, or very large trees. Brand-new C2 domains not in the list |
+| **This skill** (semantic) | Logic flaws with no malicious string at all: dupes, races, missing server-side authorization, TOCTOU, trust-boundary errors. Purpose/capability mismatch. *Why* a pattern is or is not dangerous in context | Anything it does not read: escrowed, minified, or very large trees. Attribution — it can tell you an endpoint is unjustified, not who owns it |
 | **Pattern / entropy scanner** | Fast bulk triage over thousands of files; known signatures; high-entropy blobs; live multi-million-entry blocklists | Everything semantic — a perfectly readable dupe or an unvalidated event has no signature. High false-positive rate on legitimate obfuscation |
 | **Runtime monitor** | What appears *after* review: injected files, resources activating on start, live HTTP egress, file integrity drift | Anything that never executes during the observation window |
 

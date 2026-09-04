@@ -25,6 +25,18 @@ much weight to give a SUSPECTED pattern later.
 [ ] For an in-house resource: is it in version control, and does the working copy match HEAD?
 ```
 
+When the resource is under git, do this before reading anything — an injected file or a modified
+line shows up immediately and reorders the whole audit:
+
+```bash
+git status --short            # untracked/modified files that should not be there
+git log --oneline -15         # unexpected or unattributed commits
+git diff HEAD                 # uncommitted modifications to a deployed resource
+```
+
+A tracked resource with **untracked `.lua` files** in it, or a modification nobody made, is the
+single strongest signal in this entire skill. Chase it before anything else.
+
 If the user cannot say where it came from, say so in the report. "Origin unknown" is itself a
 finding — it means no integrity baseline exists.
 
