@@ -20,11 +20,15 @@ Or just ask: "audit this resource", "scan this script for backdoors", "is this s
 
 ## What it looks for
 
-**Malware and backdoors.** Remote code execution, the Cipher and Blum/Warden families, obfuscation (hex, XOR, base64, Luraph), token grabbers, Discord and Telegram exfiltration, supply-chain injection into txAdmin and build files, known C2 domains and IPs. It knows the difference between a real backdoor and a legitimate anti-dump loader.
+**Malware and backdoors.** Remote code execution, the Cipher and Blum/Warden families, obfuscation (hex, XOR, base64, Luraph, JScrambler), token grabbers, Discord and Telegram exfiltration, supply-chain injection into txAdmin and build files, known C2 domains and IPs. It knows the difference between a real backdoor and a legitimate anti-dump loader.
+
+**Your build chain.** Modern resources ship a compiled React bundle nobody reads, built on hundreds of npm packages. The audit covers the bundle and the dependency manifest — install scripts, lockfiles, typosquats — and reports a minified bundle shipped without source as unaudited rather than clean.
 
 **Exploitable code.** Money and item dupes, event forgery from cheat menus, NUI callback abuse, state-bag floods, entity spoofing, weak permissions, second-order SQL injection. The threat model assumes the player is hostile and the anti-cheat is bypassable.
 
-**Performance and stability.** Wasteful `Wait(0)` threads, uncached natives, N+1 queries, leaked streaming assets, missing `playerDropped` and `onResourceStop` cleanup, all measured against real resmon budgets.
+**Performance and stability.** Wasteful `Wait(0)` threads, uncached natives, N+1 queries, leaked streaming assets, missing `playerDropped` and `onResourceStop` cleanup, all measured against real resmon budgets and the whole-server frame budget.
+
+**Platform posture.** The server-side controls that actually stop the crash and trust exploits — `sv_stateBagStrictMode`, entity lockdown, the full state-bag rate-limiter set — and a GTA V Enhanced migration pass for what breaks when you move off Legacy.
 
 Every finding carries a confidence level, a file and line, the exploit, and a copy-paste fix. The report ends with a score out of 100 and a hard gate: any unresolved critical means not production ready.
 
@@ -54,7 +58,9 @@ Verdict: NOT production ready — 3 unresolved CRITICAL.
 
 Frameworks: ESX Legacy, QBCore, QBox (ox_core), ND_Core, ox_lib, standalone, and RedM (VORP, RSG, RedEM).
 
-Escrow-aware: encrypted `.fxap` source is reported as unaudited, never waved through as clean.
+Builds: GTA V Legacy and Enhanced. The audit works out which one you are on, because several findings change meaning between them.
+
+Escrow-aware: encrypted `.fxap` source is reported as unaudited, never waved through as clean. Same rule for a minified NUI bundle with no source.
 
 ## The toolkit
 

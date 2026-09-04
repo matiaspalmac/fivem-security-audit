@@ -1,6 +1,6 @@
 ---
 name: fivem-security-audit
-description: "Performs comprehensive FiveM resource security, performance, and compatibility audits. Detects backdoors, RATs, SQL injection, event exploitation, NUI vulnerabilities, supply chain attacks, and malware patterns across ESX, QBCore, QBox, ox_lib, and ND_Core frameworks. Use whenever a FiveM/cfx resource is being reviewed — even if not explicitly asked — including: audit FiveM script, review FiveM security, optimize FiveM resource, check FiveM performance, FiveM code review, review Lua script security, audit ESX resource, audit QBCore resource, audit QBox resource, check for exploits, FiveM vulnerability scan, or resmon optimization."
+description: "Performs comprehensive FiveM resource security, performance, and compatibility audits. Detects backdoors, RATs, SQL injection, event exploitation, NUI vulnerabilities, dupes, crash/DoS vectors, npm and build-chain supply chain attacks, and malware patterns across ESX, QBCore, QBox, ox_lib, and ND_Core frameworks, on both GTA V Legacy and Enhanced builds. Use whenever a FiveM/cfx resource is being reviewed — even if not explicitly asked — including: audit FiveM script, review FiveM security, optimize FiveM resource, check FiveM performance, FiveM code review, review Lua script security, audit ESX resource, audit QBCore resource, audit QBox resource, check for exploits, FiveM vulnerability scan, GTA V Enhanced migration check, or resmon optimization."
 argument-hint: "[full|security|performance|cleanup|compatibility|malware]"
 arguments: [mode]
 effort: max
@@ -8,10 +8,10 @@ allowed-tools: Read, Grep, Glob, Bash(wc *), Bash(ls *)
 license: MIT
 metadata:
   author: Dei
-  version: "1.0"
+  version: "1.1"
 ---
 
-# FiveM Security Audit Tool v1.0
+# FiveM Security Audit Tool v1.1
 
 You are a senior FiveM security auditor. Perform a multi-phase audit of the FiveM resource(s) in the current working directory.
 
@@ -53,17 +53,25 @@ When a single-phase mode is selected, skip the other phases and their report sec
 
 1. Read `fxmanifest.lua` / `__resource.lua` to identify all resources and file structure
 2. Detect resource type (economy, admin, UI, vehicle, job, inventory, multichar)
-3. **Read server-side files first** (highest security impact), then shared, then client
-4. If the resource has many files (15+), prioritize: server events → DB calls → NUI callbacks → client threads
-5. Run all phases using the detailed checklists in the `checks/` directory:
+3. **Determine the build target — Legacy or GTA V Enhanced.** Several findings change meaning
+   between them (pure mode, entity lockdown `full`, state bag callback semantics, resource
+   builders, escrow availability). Signals: `sv_enforceGameBuild`, `.NET`/Mono usage, Alchemist-
+   converted assets, `cfx-server` naming, `sv_syncTickRate` in configs. If it cannot be
+   determined, **say so and audit for both** — do not silently assume Legacy. See
+   `checks/compatibility.md` 4.9.
+4. **Read server-side files first** (highest security impact), then shared, then client
+5. If the resource has many files (15+), prioritize: server events → DB calls → NUI callbacks → client threads
+6. If a built NUI is present (`web/build`, `dist/`), audit the **bundle and the dependency
+   manifest**, not just the Lua — see `checks/malware.md` M.15
+7. Run all phases using the detailed checklists in the `checks/` directory:
    - **Phase 1: Security** — refer to `checks/security.md`
-   - **Phase 1b: Malware** — refer to `checks/malware.md` (backdoor/RAT/supply chain)
+   - **Phase 1b: Malware** — refer to `checks/malware.md` (backdoor/RAT/supply chain, incl. M.15 NUI build chain)
    - **Phase 2: Performance** — refer to `checks/performance.md`
    - **Phase 3: Cleanup** — refer to `checks/cleanup.md`
-   - **Phase 4: Compatibility** — refer to `checks/compatibility.md`
+   - **Phase 4: Compatibility** — refer to `checks/compatibility.md` (incl. 4.9 Enhanced migration)
    - **Phase 5: Architecture & Code Quality** — refer to `checks/architecture.md` (senior-grade structure review, library-agnostic; quality grade, does NOT affect the security gate)
-6. Output structured report with findings
-7. Offer auto-fix options
+8. Output structured report with findings
+9. Offer auto-fix options
 
 > Read each check file as you enter that phase. They contain detailed checklists, detection signatures, code examples, and known-bad patterns.
 
@@ -133,9 +141,22 @@ Date: YYYY-MM-DD | Type: [Detected] | Score: X/100
 | Token grabbers (GetConvar + net) | YES/NO |
 | Supply chain indicators | YES/NO |
 | txAdmin token theft / build-file injection | YES/NO |
+| txAdmin monitor markers (helpEmptyCode / onServerResourceFail / RESOURCE_EXCLUDE) | YES/NO |
 | GlobalState beacons (miauss/ggWP) | YES/NO |
 | Exfiltration channels (webhook/telegram) | YES/NO |
 | Persistence mechanisms | YES/NO |
+| NUI bundle shipped without source | YES/NO/NA |
+| npm install scripts (postinstall/preinstall/prepare) | YES/NO/NA |
+| Lockfile present & dependencies clean | YES/NO/NA |
+
+## Platform Posture (report when a full server, not just one resource, is in scope)
+| Item | Status |
+|------|--------|
+| Build target (Legacy / Enhanced / undetermined) | — |
+| `sv_stateBagStrictMode` | ON/OFF/UNKNOWN |
+| `sv_entityLockdown` | full/strict/relaxed/**inactive** |
+| State bag rate limiters (all 3 families) | SET/PARTIAL/UNSET |
+| FXServer artifact currency | current / stale |
 
 ## Architecture & Code Quality (Phase 5 — quality grade, NOT the security gate)
 Grade: A–F
@@ -160,21 +181,44 @@ flag missing structure/typing/efficiency, never the absence of a specific librar
 
 Recommended server.cfg hardening:
 ```cfg
-sv_entityLockdown strict
+# --- entity / control ---
+sv_entityLockdown strict              # 'full' also available on Enhanced (disables dummy objects)
 setr sv_filterRequestControl 4
-sv_disableClientReplays true
-sv_enableNetworkedSounds false
-sv_enableNetworkedScriptEntityStates false
-sv_pureLevel 2
-sv_authMaxVariance 2
-sv_authMinTrust 5
-sv_endpointPrivacy true
-sv_pure_verify_client_settings true   # FXServer 8450+ — validate client config
-sv_kick_players_cnl_timeout_sec 30    # FXServer 8450+ — drop stalled/abusive connections
-set sv_enableDevtools false
+set sv_filterRequestControlSettleTimer 30000
+
+# --- state bags (the single biggest crash + trust surface) ---
+setr sv_stateBagStrictMode true       # only the SERVER may write replicated entity/player state
 set rateLimiter_stateBag_rate 75
 set rateLimiter_stateBag_burst 125
+set rateLimiter_stateBagFlood_rate 150
+set rateLimiter_stateBagFlood_burst 175
+set rateLimiter_stateBagSize_rate 131072
+set rateLimiter_stateBagSize_burst 262144
+
+# --- networked game events ---
+sv_enableNetworkedSounds false
+sv_enableNetworkedScriptEntityStates false
+sv_enableNetworkedPhoneExplosions false   # default false — never enable
+sv_disableClientReplays true
+
+# --- client integrity / auth ---
+sv_pureLevel 2                        # Legacy only; on Enhanced pure mode is ALWAYS on and cannot be disabled
+sv_authMaxVariance 1                  # 1 = identifier least likely to change (default 5)
+sv_authMinTrust 5                     # 5 = require strongest auth (default 1)
+sv_pure_verify_client_settings true
+sv_kick_players_cnl_timeout_sec 30
+set sv_kick_players_cnl_consecutive_failures 2
+
+# --- privacy / exposure ---
+sv_endpointPrivacy true
+sv_forceIndirectListing true          # do not advertise the real server IP
+set sv_devMode false                  # default false; Enhanced gates ALL dev tools behind this (caps server at 8 slots)
 ```
+
+> **`sv_enableDevtools` does not exist.** It is an unimplemented feature request
+> ([citizenfx/fivem#2667](https://github.com/citizenfx/fivem/issues/2667)). Never recommend it —
+> the real control is `sv_devMode`. Flag it if you see it in a server.cfg being audited: it is a
+> no-op giving false assurance.
 
 Avoid `ensure *` in production (non-deterministic load order); keep framework + DB connector first, then group related resources.
 
@@ -216,8 +260,16 @@ Compound risk (once per combination):
 - PerformHttpRequest + load() (backdoor): -20
 - Token grabber (GetConvar + exfiltration): -20
 - Supply chain (sessionmanager/system modification): -20
+- txAdmin monitor injection marker present (helpEmptyCode / onServerResourceFail / RESOURCE_EXCLUDE): -20
+- Malicious/compromised npm dependency or install script reaching the shipped bundle: -20
 - State bag / event flood with no size cap (server-crash DoS): -10
 - Sensitive server action reachable with no server-side auth (cheat-menu trivially exploitable): -10
+- Vendored ox_inventory below 2.47.6 (known dupe): -8
+
+Not scored (report separately, they are not defects in the code being audited):
+- **UNAUDITED** surface — escrowed `.fxap` files, or a minified bundle shipped without source.
+  Never convert unaudited into a pass or a deduction; call it out in its own line.
+- Platform posture (convars, artifact currency) — the operator's to fix, not the resource's.
 
 Multiple occurrences: base deduction once, -2 per additional location.
 

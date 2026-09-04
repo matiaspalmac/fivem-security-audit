@@ -206,15 +206,29 @@ if #(coords - targetPos) > 10.0 then return end
 
 **ox ecosystem (ox_inventory / ox_lib / ox_target / oxmysql):**
 ```
-[ ] ox_inventory hooks/callbacks are VALIDATION-ONLY — no DB writes or state mutation inside a hook (yielding/mutating risks race conditions + dirty DB saves)
+[ ] ox_inventory hooks/callbacks are VALIDATION-ONLY — no DB writes or state mutation inside a hook (yielding/mutating risks race conditions + dirty DB saves). Side effects belong in a **post-hook event** (v2.47.0+), not in the hook itself
 [ ] Stashes registered with an `instance` field where access must be isolated (prevents cross-player access)
 [ ] Stash/trunk identity not derived from spoofable client data — plate-based trunks must bind to a unique owner key (same-plate shared-inventory dupe, ox_inventory #1829)
-[ ] ox_inventory kept up to date (multiple dupes patched: swapItems delay dupe, drop-data dupe — old forks are vulnerable)
+[ ] Concurrent inventory mutation goes through the locks manager (v2.47.0+) — do not hand-roll a competing lock
 [ ] ox_lib callbacks (`lib.callback.register`) validate source + params server-side like any net event
 [ ] ox_target server events re-check distance/permission server-side (client sends the interaction)
 [ ] oxmysql queries parameterized (`?` / named) — never concatenated (see 1.2)
 ```
-Reference: [ox_inventory security](https://github.com/overextended/ox_inventory/security), [coxdocs server functions](https://coxdocs.dev/ox_inventory/Functions/Server).
+
+**Version floor: ox_inventory >= 2.47.6.** Pinned/vendored forks below this are exploitable. Recent
+dupe-relevant history — check the shipped version, not the README:
+
+| Version | Security change |
+|---------|-----------------|
+| 2.46.1 | Corrected an exploit check in `swapItems` (unauthorized transfers) |
+| 2.47.0 | Stash `instance` validation, post-hook events, locks manager, extra `SetSlot`/`RemoveItem` arg validation |
+| 2.47.3 | Post-hook delays — **introduced** a dupe |
+| 2.47.6 | Fixes that dupe: atomic `swapItems` commit + no dirty state save during hooks |
+
+Flag any resource vendoring/bundling its own copy of ox_inventory (or pinning `2.47.0`–`2.47.5`) as
+HIGH — a stale embedded copy is a dupe waiting to happen.
+
+Reference: [ox_inventory security](https://github.com/overextended/ox_inventory/security), [releases](https://github.com/overextended/ox_inventory/releases), [coxdocs server functions](https://coxdocs.dev/ox_inventory/Functions/Server).
 
 ## 1.10 NUI Callback Trust (CRITICAL)
 
@@ -237,13 +251,38 @@ NUI callbacks are POST requests to `localhost:13172` — forgeable via browser D
 [ ] State bag payload size < 16KB (prevent crash via oversized payloads)
 [ ] State bag changes rate-limited server-side
 [ ] No trusting client-replicated state for permission checks
+[ ] Resource does not BREAK under `sv_stateBagStrictMode true` — i.e. it never relies on the
+    client writing a replicated entity/player state bag (see below)
+[ ] Handler tolerates the entity not existing yet / being gone (no unguarded native calls on it)
 ```
 
-State bag rate limiting crash: Attackers flood state bag changes to crash the server. Mitigate with:
+**`sv_stateBagStrictMode` — the first-class mitigation.** When enabled, only the server may modify
+networked entity and player state bags; the network owner of a replicated entity loses write access.
+This kills client-forged state at the platform layer instead of per-resource.
+
+```cfg
+setr sv_stateBagStrictMode true
+```
+
+Audit implication: recommend it, and check whether the resource would still work with it on. A
+resource that sets `Entity(veh).state.fuel` **from the client** and expects the server to read it back
+is both insecure and about to break — flag it and move the write server-side.
+
+State bag flood/oversize crash (still valid: 100+ bags with ~1MB payloads networked to nearby
+players = server crash, [citizenfx/fivem#2361](https://github.com/citizenfx/fivem/issues/2361)).
+Full rate-limiter set — the skill previously listed only the first pair:
 ```cfg
 set rateLimiter_stateBag_rate 75
 set rateLimiter_stateBag_burst 125
+set rateLimiter_stateBagFlood_rate 150
+set rateLimiter_stateBagFlood_burst 175
+set rateLimiter_stateBagSize_rate 131072
+set rateLimiter_stateBagSize_burst 262144
 ```
+
+**Enhanced semantics change:** state bag change callbacks only fire when the entity actually exists,
+and replicated values must be set explicitly. Code that assumed a handler would fire for a
+not-yet-streamed entity silently stops running. Flag it as a migration break, not just a style issue.
 
 ## 1.13 Sensitive Data Exposure (MEDIUM)
 
@@ -327,7 +366,15 @@ Split every cheat category by who owns the fix:
 OneSync makes the server authoritative over entities. Resources that spawn or manage entities should lean on the server-side model instead of client spawns.
 
 ```
-[ ] Entity lockdown set appropriately: `sv_entityLockdown strict` (no client entities) or `relaxed` (block script-owned client entities); `inactive` = clients spawn anything (flag it)
+[ ] Entity lockdown set appropriately — `inactive` (default!) = clients spawn anything, always flag it:
+
+| Mode | Effect |
+|------|--------|
+| `full` | Strict **plus** dummy objects disabled — **Enhanced only** |
+| `strict` | No client entity creation at all |
+| `relaxed` | Script-owned client entities blocked; on Enhanced also restricts population spawning to the client's owned world-grid areas |
+| `inactive` | **Default.** Unrestricted client spawns — flag as HIGH on any public server |
+
 [ ] Per-bucket lockdown via SetRoutingBucketEntityLockdownMode for instanced content
 [ ] Server-side entity creation (CreateVehicleServerSetter, CreatePed, CreateObject as RPC) preferred over asking the client to spawn then register
 [ ] Player isolation via SetPlayerRoutingBucket / SetEntityRoutingBucket (instances, jails, interiors) — not client-trusted visibility
@@ -341,7 +388,7 @@ OneSync makes the server authoritative over entities. Resources that spawn or ma
 A single malicious client can crash the whole server or nearby players. These are actively sold/advertised by cheat sellers.
 
 ```
-[ ] State bag flood: handler rejects oversized/rapid changes; convars set (rateLimiter_stateBag_rate/burst). 100+ state bags with ~1MB payloads networked to nearby players = server crash (citizenfx #2361)
+[ ] State bag flood: handler rejects oversized/rapid changes; ALL THREE limiter families set (`rateLimiter_stateBag_*`, `rateLimiter_stateBagFlood_*`, `rateLimiter_stateBagSize_*`) plus `sv_stateBagStrictMode true`. 100+ state bags with ~1MB payloads networked to nearby players = server crash (citizenfx #2361)
 [ ] State bag payloads size-capped server-side (< 16KB) before trusting/rebroadcasting
 [ ] Oversized net event payloads rejected (cap string length and table size — see 1.1); no unbounded json.decode of client data
 [ ] Entity/object spam: scenario- or client-spawned objects that bypass entityCreating (citizenfx #3675) mitigated by entity lockdown (1.18)
@@ -349,4 +396,13 @@ A single malicious client can crash the whole server or nearby players. These ar
 [ ] Every DB-touching net event rate-limited (flood → DB exhaustion)
 [ ] Recursive/self-retriggering events guarded (no event handler that re-emits itself unconditionally)
 ```
-References: [Cfx state bags](https://docs.fivem.net/docs/scripting-manual/networking/state-bags/), [state bag rate-limit issue #2361](https://github.com/citizenfx/fivem/issues/2361), [scenario crash #3675](https://github.com/citizenfx/fivem/issues/3675).
+
+**Undisclosed crash vectors are a standing risk.** New client-side crash methods are reported
+regularly and are deliberately not detailed publicly while triage is open (e.g.
+[#3722](https://github.com/citizenfx/fivem/issues/3722), open, method withheld). A static audit
+cannot enumerate these. When a server is being hardened, the durable control is **artifact
+currency** — run a recommended FXServer build and update within about a week of release, because
+crash vectors are patched platform-side. State that explicitly rather than implying the resource
+audit covers it.
+
+References: [Cfx state bags](https://docs.fivem.net/docs/scripting-manual/networking/state-bags/), [state bag rate-limit issue #2361](https://github.com/citizenfx/fivem/issues/2361), [scenario crash #3675](https://github.com/citizenfx/fivem/issues/3675), [server commands / convars](https://docs.fivem.net/docs/server-manual/server-commands/).

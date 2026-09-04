@@ -163,11 +163,44 @@ Anchor findings to `resmon` (F8 → `resmon 1`) and server-thread hitch, not vib
 | Server tick (per resource) | < 0.5 ms | 0.5–1.0 ms | > 1.0 ms |
 | `CreateThread` count (one resource) | single digits | tens | hundreds |
 
+**Whole-server budget:** a frame at 60 FPS is ~16.6 ms and the game itself needs most of it. The
+sum of ALL resources should stay under **~8 ms**; any single resource consistently over **1 ms**
+warrants investigation and over **5 ms** is a defect. A resource that looks fine alone can still be
+the one that pushes a 40-resource server over budget — state its share, not just its absolute cost.
+
 ```
 [ ] No single resource sitting > 0.05ms at idle on an empty server (idle cost is pure waste)
 [ ] Server-side per-tick work bounded — heavy work moved to intervals/events, not every frame
 [ ] OneSync entity count kept sane — each networked entity costs sync bandwidth/CPU for all nearby players
 [ ] Profiling claims backed by an actual resmon reading when possible (state the number)
+[ ] Event-driven over polled: an event costs nothing while idle, a thread costs every frame forever
 ```
 
+**Deeper profiling** when resmon is not enough to localize the cost:
+```
+profiler record 500     # capture ~500 frames
+profiler view           # open the recorded profile
+```
+Use it to name the actual hot function rather than guessing which loop is heavy.
+
 Report the worst offenders with their measured/estimated ms, not just a pass/fail.
+
+## 2.8 Platform-Level Performance Levers (server config, not code)
+
+These are outside the resource but belong in the report when the audit touches a whole server —
+a perfectly optimized resource still stutters on a misconfigured host.
+
+```
+[ ] sv_syncTickRate set deliberately (1–120, default 60). Lowering it cuts server CPU and
+    bandwidth at the cost of sync smoothness; it REPLACES the deprecated sv_useAccurateSends
+[ ] sv_resourceFileDownloadTimeout sane (default 2 min) — long streaming downloads on join
+[ ] sv_endpointPrivacy / sv_forceIndirectListing do not conflict with the proxy setup
+[ ] Streaming payload audited separately: oversized vehicle/clothing YTD textures dominate join
+    time and client memory far more than Lua cost does
+[ ] Resource count kept in check — every started resource has fixed scheduler overhead
+[ ] Avoid `ensure *` — non-deterministic load order and starts resources nobody audited
+```
+
+**OneSync scope reality check:** entities are only created on clients inside a focus zone
+(~424 units). A resource that spawns entities far outside any player's scope is paying server sync
+cost for something nobody can see — flag it as waste, not just a style issue.

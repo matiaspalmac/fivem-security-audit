@@ -1,7 +1,7 @@
 {
   "name": "fivem-security-audit",
-  "version": "1.0.0",
-  "description": "Claude Code skill that audits FiveM and RedM resources for backdoors, exploits, dupes, crash vectors and performance issues. Supports ESX, QBCore, QBox, ox_lib and ND_Core.",
+  "version": "1.1.0",
+  "description": "Claude Code skill that audits FiveM and RedM resources for backdoors, exploits, dupes, crash vectors, supply-chain risk and performance issues. Covers GTA V Legacy and Enhanced, ESX, QBCore, QBox, ox_lib and ND_Core.",
   "keywords": [
     "fivem",
     "fivem-security-audit",
@@ -25,7 +25,11 @@
     "nui-exploit",
     "state-bags",
     "gta5",
+    "gtav-enhanced",
     "cipher-panel",
+    "blum-panel",
+    "txadmin",
+    "npm-supply-chain",
     "rat-detection"
   ],
   "author": "Dei",
