@@ -67,11 +67,19 @@ If you add a check, exercise it in `examples/`:
 ## Before you open the PR
 
 ```bash
-node .github/validate.mjs      # frontmatter + package integrity
+node .github/validate.mjs       # frontmatter + package integrity
+node .github/oracle-check.mjs   # checks <-> corpus <-> SKILL.md consistency
 ```
 
-CI runs this on every push. Then run the skill against both fixtures and compare with
-`EXPECTED.md` — a missed CRITICAL or a flagged clean file is a regression.
+CI runs both on every push. The second one enforces the wiring: every finding promised in
+`EXPECTED.md` must resolve to a real section in `checks/` and be tagged with a `BUG[<ID>]` marker in
+`vulnerable_shop/`, `secure_shop/` must contain no markers at all, and SKILL.md must still reference
+every check file and agree with its own mode list. Renumbering a section without updating the corpus
+fails the build instead of silently orphaning the example.
+
+Neither script can judge whether the audit *finds* anything — that part is still manual. Run the
+skill against both fixtures and compare with `EXPECTED.md`: a missed CRITICAL, or anything flagged in
+`secure_shop`, is a regression.
 
 ## House rules
 

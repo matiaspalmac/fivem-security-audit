@@ -4,7 +4,7 @@ local ESX = exports['es_extended']:getSharedObject()
 -- BUG[SEC-1.10/1.3]: trusts client-sent price AND uses client-sent player id
 RegisterNetEvent('vshop:buy')
 AddEventHandler('vshop:buy', function(playerId, itemName, price, qty)
-    local xPlayer = ESX.GetPlayerFromId(playerId) -- BUG: should use source
+    local xPlayer = ESX.GetPlayerFromId(playerId) -- BUG[SEC-1.1]: uses client-sent id, not source
 
     -- BUG[SEC-1.2]: SQL injection via string concatenation
     MySQL.query("SELECT stock FROM shop_items WHERE name = '" .. itemName .. "'", function(rows)

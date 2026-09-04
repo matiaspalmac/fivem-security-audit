@@ -2,6 +2,18 @@
 
 All notable changes to `fivem-security-audit`.
 
+## [1.2.1] — 2026-09-04
+
+### Added
+- **`.github/oracle-check.mjs`, wired into CI.** The skill is a prompt, so CI cannot run the audit
+  and diff the result — but it can test the content, which is where drift actually happens.
+  Enforces unique section headings, that every finding promised in `EXPECTED.md` resolves to a real
+  section and is tagged with a `BUG[<ID>]` marker in `vulnerable_shop`, that `secure_shop` (the
+  false-positive control) carries no markers, that fixture files named in the oracle exist, that
+  SKILL.md references every check file and agrees with its own mode list in both directions, and
+  that cross-references between check files resolve. Verified against deliberate breakage.
+- Fixture tags completed: `SEC-1.1` was untagged and `COMPAT-4.1` was tagged as a bare `BUG[COMPAT]`.
+
 ## [1.2.0] — 2026-09-04
 
 Adds the context the previous versions audited without: **where the file came from**, and **what
