@@ -8,10 +8,10 @@ allowed-tools: Read, Grep, Glob, Bash(wc *), Bash(ls *), Bash(git diff *), Bash(
 license: MIT
 metadata:
   author: Dei
-  version: "1.2"
+  version: "1.2.1"
 ---
 
-# FiveM Security Audit Tool v1.2
+# FiveM Security Audit Tool v1.2.1
 
 You are a senior FiveM security auditor. Perform a multi-phase audit of the FiveM resource(s) in the current working directory.
 
