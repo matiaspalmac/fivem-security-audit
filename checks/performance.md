@@ -163,11 +163,71 @@ Anchor findings to `resmon` (F8 → `resmon 1`) and server-thread hitch, not vib
 | Server tick (per resource) | < 0.5 ms | 0.5–1.0 ms | > 1.0 ms |
 | `CreateThread` count (one resource) | single digits | tens | hundreds |
 
+**Whole-server budget:** a frame at 60 FPS is ~16.6 ms and the game itself needs most of it. The
+sum of ALL resources should stay under **~8 ms**; any single resource consistently over **1 ms**
+warrants investigation and over **5 ms** is a defect. A resource that looks fine alone can still be
+the one that pushes a 40-resource server over budget — state its share, not just its absolute cost.
+
 ```
 [ ] No single resource sitting > 0.05ms at idle on an empty server (idle cost is pure waste)
 [ ] Server-side per-tick work bounded — heavy work moved to intervals/events, not every frame
 [ ] OneSync entity count kept sane — each networked entity costs sync bandwidth/CPU for all nearby players
 [ ] Profiling claims backed by an actual resmon reading when possible (state the number)
+[ ] Event-driven over polled: an event costs nothing while idle, a thread costs every frame forever
 ```
 
+**Deeper profiling** when resmon is not enough to localize the cost:
+```
+profiler record 500     # capture ~500 frames
+profiler view           # open the recorded profile
+```
+Use it to name the actual hot function rather than guessing which loop is heavy.
+
 Report the worst offenders with their measured/estimated ms, not just a pass/fail.
+
+## 2.0 Server Thread Blocking (CRITICAL — read this before the client checks)
+
+**The server runs one main thread.** Any resource that holds it stalls every other resource and
+every player. This is the single highest-severity performance defect and it doubles as a DoS
+vector, so it is checked first and reported as CRITICAL, not as an optimization.
+
+```
+[ ] No loop without a yield on the SERVER side — `while true do ... end` with no `Wait` hangs the
+    server, it does not merely slow it
+[ ] No synchronous/blocking DB call on a hot path — use oxmysql `.await` inside a thread or the
+    callback form; never busy-wait on a result
+[ ] No unbounded iteration over client-supplied data (a table size cap is a performance control as
+    well as a security one — see security 1.1/1.19)
+[ ] No `string.rep`, `table.concat` or JSON encode/decode over client-controlled size (memory bomb)
+[ ] Lua pattern matching not run over attacker-controlled strings of unbounded length
+[ ] Recursive functions bounded (stack exhaustion)
+[ ] Per-tick server work bounded; heavy jobs moved to intervals, queues or events
+```
+
+**How the operator sees this:** a `server thread hitch warning` names the offending resource in the
+FXServer console / txAdmin. Repeated or multi-second hitches mean blocking work — almost always an
+unyielding Lua loop or a slow query. Cite the warning as the confirmation signal when recommending
+a fix, and when a resource is suspected, bisect by stopping resources and re-adding with `ensure`.
+
+**Why it is also a security finding:** an event handler that loops proportionally to a client-sent
+value gives any player a one-line server freeze. Cross-reference security 1.19.
+
+## 2.8 Platform-Level Performance Levers (server config, not code)
+
+These are outside the resource but belong in the report when the audit touches a whole server —
+a perfectly optimized resource still stutters on a misconfigured host.
+
+```
+[ ] sv_syncTickRate set deliberately (1–120, default 60). Lowering it cuts server CPU and
+    bandwidth at the cost of sync smoothness; it REPLACES the deprecated sv_useAccurateSends
+[ ] sv_resourceFileDownloadTimeout sane (default 2 min) — long streaming downloads on join
+[ ] sv_endpointPrivacy / sv_forceIndirectListing do not conflict with the proxy setup
+[ ] Streaming payload audited separately: oversized vehicle/clothing YTD textures dominate join
+    time and client memory far more than Lua cost does
+[ ] Resource count kept in check — every started resource has fixed scheduler overhead
+[ ] Avoid `ensure *` — non-deterministic load order and starts resources nobody audited
+```
+
+**OneSync scope reality check:** entities are only created on clients inside a focus zone
+(~424 units). A resource that spawns entities far outside any player's scope is paying server sync
+cost for something nobody can see — flag it as waste, not just a style issue.

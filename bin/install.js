@@ -11,6 +11,13 @@ const PKG_ROOT = path.join(__dirname, '..');
 const SOURCE_SKILL = path.join(PKG_ROOT, 'SKILL.md');
 const SOURCE_CHECKS = path.join(PKG_ROOT, 'checks');
 
+let VERSION = '';
+try {
+    VERSION = require(path.join(PKG_ROOT, 'package.json')).version;
+} catch (_) {
+    VERSION = 'unknown';
+}
+
 const CYAN = '\x1b[36m';
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
@@ -20,11 +27,15 @@ const DIM = '\x1b[2m';
 const RESET = '\x1b[0m';
 
 function banner() {
+    const title = 'FiveM Security Audit - Claude Code';
+    const sub = `v${VERSION} by Dei`;
+    const width = title.length + 4;
+    const pad = (s) => s + ' '.repeat(Math.max(0, width - s.length - 2));
     console.log('');
-    console.log(`${CYAN}${BOLD}  ╔══════════════════════════════════════╗${RESET}`);
-    console.log(`${CYAN}${BOLD}  ║  FiveM Security Audit - Claude Code ║${RESET}`);
-    console.log(`${CYAN}${BOLD}  ║         v1.0 by Dei                 ║${RESET}`);
-    console.log(`${CYAN}${BOLD}  ╚══════════════════════════════════════╝${RESET}`);
+    console.log(`${CYAN}${BOLD}  ╔${'═'.repeat(width)}╗${RESET}`);
+    console.log(`${CYAN}${BOLD}  ║ ${pad(title)} ║${RESET}`);
+    console.log(`${CYAN}${BOLD}  ║ ${pad(sub)} ║${RESET}`);
+    console.log(`${CYAN}${BOLD}  ╚${'═'.repeat(width)}╝${RESET}`);
     console.log('');
 }
 
@@ -120,16 +131,17 @@ function install() {
     console.log(`    ${CYAN}"check security of this script"${RESET}`);
     console.log(`    ${CYAN}"scan for backdoors"${RESET}`);
     console.log('');
-    console.log(`${BOLD}What's in v1.0:${RESET}`);
-    console.log(`  ${GREEN}+${RESET} Optimized for Claude Opus 4.8 (effort: max, model inherit)`);
-    console.log(`  ${GREEN}+${RESET} Dedicated malware/backdoor detection module`);
-    console.log(`  ${GREEN}+${RESET} Supply chain + txAdmin/build-pipeline attack detection`);
-    console.log(`  ${GREEN}+${RESET} Token grabber & credential stealer patterns`);
-    console.log(`  ${GREEN}+${RESET} Refreshed 2025-2026 threat intel (Blum/Warden family, C2 IPs)`);
-    console.log(`  ${GREEN}+${RESET} Advanced obfuscation detection (hex, XOR, base64, entropy)`);
-    console.log(`  ${GREEN}+${RESET} Exfiltration channel detection (Discord, Telegram, C2)`);
-    console.log(`  ${GREEN}+${RESET} Expanded NUI/CEF exploitation checks`);
-    console.log(`  ${GREEN}+${RESET} Modular architecture (progressive check loading)`);
+    console.log(`${BOLD}What's in v${VERSION}:${RESET}`);
+    console.log(`  ${GREEN}+${RESET} Provenance phase: trust tiers, repack/crack indicators, purpose mismatch`);
+    console.log(`  ${GREEN}+${RESET} Malware/backdoor module (Blum/Warden, Cipher, C2 IOCs, obfuscation)`);
+    console.log(`  ${GREEN}+${RESET} Supply chain: txAdmin, build pipeline, and npm/NUI bundle chain`);
+    console.log(`  ${GREEN}+${RESET} Hostile-client threat model (cheat menus, event forgery, DoS)`);
+    console.log(`  ${GREEN}+${RESET} Player data, logging and privacy checks`);
+    console.log(`  ${GREEN}+${RESET} Connection phase / deferrals and screenshot capture checks`);
+    console.log(`  ${GREEN}+${RESET} GTA V Legacy and Enhanced build coverage`);
+    console.log(`  ${GREEN}+${RESET} Performance: server thread blocking, resmon and whole-server budgets`);
+    console.log('');
+    console.log(`${DIM}  Changelog: https://github.com/matiaspalmac/fivem-security-audit/blob/main/CHANGELOG.md${RESET}`);
     console.log('');
     console.log(`${YELLOW}Restart Claude Code for the skill to take effect.${RESET}`);
     console.log('');
