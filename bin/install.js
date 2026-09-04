@@ -39,6 +39,17 @@ function banner() {
     console.log('');
 }
 
+// Replace a directory we fully own, so a file removed or renamed upstream does
+// not survive as a stale copy. Merging on top of the old install left orphaned
+// checks behind forever, which in a security tool means outdated guidance
+// sitting next to current guidance with nothing marking which is which.
+function replaceDir(src, dest) {
+    if (fs.existsSync(dest)) {
+        fs.rmSync(dest, { recursive: true, force: true });
+    }
+    copyDirRecursive(src, dest);
+}
+
 function copyDirRecursive(src, dest) {
     if (!fs.existsSync(dest)) {
         fs.mkdirSync(dest, { recursive: true });
@@ -85,20 +96,41 @@ function install() {
         console.log(`${DIM}  Removed old skill.md (legacy migration)${RESET}`);
     }
 
-    // Remove previous "fivem-audit" install (renamed to fivem-security-audit)
+    // Remove a previous "fivem-audit" install (this package's former name), but
+    // ONLY after confirming it is actually ours. The directory name is not proof
+    // of ownership: a user may have written their own skill called fivem-audit,
+    // and deleting someone else's work during an unrelated install is not a
+    // migration, it is data loss.
     if (fs.existsSync(OLD_SKILL_DIR)) {
-        fs.rmSync(OLD_SKILL_DIR, { recursive: true });
-        console.log(`${DIM}  Removed old fivem-audit skill (renamed to fivem-security-audit)${RESET}`);
+        let ownedByUs = false;
+        try {
+            const oldSkill = path.join(OLD_SKILL_DIR, 'SKILL.md');
+            if (fs.existsSync(oldSkill)) {
+                const head = fs.readFileSync(oldSkill, 'utf8').slice(0, 2048);
+                // The former release declared this exact name in its frontmatter.
+                ownedByUs = /^name:\s*fivem-audit\s*$/m.test(head);
+            }
+        } catch (_) {
+            ownedByUs = false;
+        }
+
+        if (ownedByUs) {
+            fs.rmSync(OLD_SKILL_DIR, { recursive: true, force: true });
+            console.log(`${DIM}  Removed the old fivem-audit install (renamed to fivem-security-audit)${RESET}`);
+        } else {
+            console.log(`${YELLOW}  Note: ${OLD_SKILL_DIR} exists but does not look like this skill's`);
+            console.log(`  former release, so it was left alone. Remove it yourself if you meant to.${RESET}`);
+        }
     }
 
     // Copy SKILL.md
     const dest = path.join(SKILL_DIR, 'SKILL.md');
     fs.copyFileSync(SOURCE_SKILL, dest);
 
-    // Copy checks/ directory
+    // Replace checks/ wholesale so a check removed upstream does not linger.
     if (fs.existsSync(SOURCE_CHECKS)) {
         const destChecks = path.join(SKILL_DIR, 'checks');
-        copyDirRecursive(SOURCE_CHECKS, destChecks);
+        replaceDir(SOURCE_CHECKS, destChecks);
     }
 
     const checkFiles = fs.existsSync(SOURCE_CHECKS)

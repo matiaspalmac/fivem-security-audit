@@ -2,6 +2,19 @@
 
 All notable changes to `fivem-security-audit`.
 
+## [1.2.2] — 2026-09-04
+
+### Fixed
+- **The installer deleted a directory it did not own.** It removed `~/.claude/skills/fivem-audit`
+  unconditionally as a rename migration, but the directory NAME is not proof of ownership: a user
+  who wrote their own skill called `fivem-audit` lost it silently during an unrelated install.
+  It now reads that skill's frontmatter and only removes it when the name matches this package's
+  former release; otherwise it says what it found and leaves it alone. Both paths verified.
+- **The installer left stale checks behind.** `copyDirRecursive` merged into the previous install,
+  so a check removed or renamed upstream stayed on disk forever. In a security tool that means
+  outdated guidance sitting next to current guidance with nothing marking which is which.
+  `checks/` is now replaced wholesale. Verified by planting a file and reinstalling.
+
 ## [1.2.1] — 2026-09-04
 
 ### Added
