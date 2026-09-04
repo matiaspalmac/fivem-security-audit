@@ -226,7 +226,11 @@ the server runs — several findings change meaning between them.
 [ ] Resource builders NO LONGER SUPPORTED — a resource relying on yarn/webpack builders at runtime
     breaks. Ship a prebuilt bundle instead. (Security upside: this removes the *_builder.js
     injection vector on Enhanced — see malware M.14b — but it stays live on Legacy)
-[ ] Mono replaced by .NET (requires the .NET 10 SDK) — C# resources must be rebuilt
+[ ] Mono replaced by .NET (requires the .NET 10 SDK) — C# resources must be rebuilt; old
+    Mono-compiled assemblies will not load at all
+[ ] C# resources ship a compiled `.dll`, which is **unreadable to this audit** — apply the
+    UNAUDITED rule (same as escrow and minified bundles). Audit the C# SOURCE if it is present;
+    if only the assembly ships, say so rather than implying coverage
 [ ] Key-value store files must be migrated (migration script provided) — resources using KVP
     server-side need the migration run, or data is lost
 [ ] Remote command output requires an explicit `PrintRemoteCommandLog()` call to be client-visible

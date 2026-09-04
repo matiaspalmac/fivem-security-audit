@@ -61,7 +61,39 @@ MySQL.query("SELECT * FROM users WHERE id = :id", { id = id })
 [ ] Lock released on playerDropped
 [ ] Floating-point precision: use integers for money (cents), never float math
 [ ] Transfer operations: deduct from sender FIRST, then give to receiver
+[ ] Arithmetic bounded BEFORE it is performed — see the wraparound chain below
 ```
+
+**Lua 5.4 integer wraparound is a dupe primitive.** Most FiveM resources run `lua54 'yes'`, where
+integers are 64-bit and **overflow wraps silently by two's-complement rules — it does not error and
+does not clamp**. So the classic "validate that qty is positive" check is not enough:
+
+```lua
+-- VULNERABLE: qty is positive and price is server-authoritative, yet this still mints money
+local total = item.price * qty        -- qty large enough → product wraps NEGATIVE
+if xPlayer.getMoney() < total then return end   -- passes trivially: total is negative
+xPlayer.removeMoney(total)            -- removing a negative amount ADDS money
+```
+
+```lua
+-- FIXED: bound the operands, not just their sign
+if type(qty) ~= 'number' or qty ~= qty then return end   -- NaN
+qty = math.floor(qty)
+if qty < 1 or qty > MAX_QTY then return end              -- hard upper bound BEFORE multiplying
+local total = item.price * qty
+if total <= 0 or total > MAX_TRANSACTION then return end -- post-condition guard
+```
+
+```
+[ ] Upper bounds on every client-influenced quantity, not just `> 0` checks
+[ ] Post-multiplication sanity check (`total > 0`) on any computed amount
+[ ] `math.type(x) == 'integer'` where integer semantics are assumed
+[ ] Money math avoids `/` (always yields a float in 5.4) — use `//` for integer division
+[ ] Amounts compared against a sane per-transaction ceiling, not just against the balance
+```
+
+This chain is worth reporting even when each individual check looks present — "validates positive"
+and "price is server-side" are both true in the vulnerable version above.
 
 Mutex pattern:
 ```lua
@@ -566,3 +598,34 @@ can read and modify it. It is a preferences store, not a security boundary.
 
 Legitimate example (do NOT flag): a HUD storing `{theme, scale, positions}` in client KVP.
 Finding: a shop storing `purchased_vip = true` in client KVP and honoring it later.
+
+## 1.24 Discord Integration & External Identity (HIGH)
+
+Discord-role whitelisting and Discord-role-to-admin mapping are near-universal. They put a **bot
+token** on the server and make an **external API a dependency of your permission system**.
+
+```
+[ ] Bot token in a convar loaded with `set` — NEVER `setr`. Widely repeated setup guides tell people
+    to use `setr` for tokens and whitelist keys; that replicates the value to every client, who can
+    read it from the F8 console. Treat a `setr` token as ALREADY COMPROMISED and tell the operator
+    to rotate it, not just to change the line
+[ ] Token not in a config file committed to a repo (public commits get scraped within minutes;
+    rotate on any exposure, do not merely delete the line — git history keeps it)
+[ ] Bot has MINIMAL permissions — reading guild member roles is enough; it does not need send,
+    moderate, manage-roles or administrator
+[ ] Discord role checks resolved SERVER-side; the client never asserts its own roles or Discord id
+[ ] Discord identifier taken from GetPlayerIdentifiers (`discord:`), not from anything client-sent
+[ ] **Fail CLOSED on API failure.** A Discord outage, a rate-limit 429, or a revoked token must deny
+    access, never default-allow. `if not ok then return true end` in a whitelist check is a
+    full whitelist bypass on demand — and an attacker can often induce the failure by exhausting
+    the rate limit
+[ ] Role lookups cached with a TTL so every join does not hit the API (rate-limit exhaustion is
+    both an outage and, with fail-open, a bypass)
+[ ] Permission decisions do not rest on Discord ALONE where the action is destructive — pair with
+    ACE (1.9) so losing the Discord dependency does not lose the server
+[ ] Webhook URLs treated as credentials, same rules as the token (1.13b)
+```
+
+**Report framing:** a Discord-role permission system means your in-game admin boundary is only as
+strong as a third-party API and one token. That is an acceptable trade only if it fails closed and
+the token is not replicated to clients.

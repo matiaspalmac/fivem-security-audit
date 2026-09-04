@@ -49,7 +49,7 @@ When a single-phase mode is selected, skip the other phases and their report sec
 - **After completing the audit, self-review: remove any finding you cannot re-confirm from the code.**
 - **Never speculate about code you have not opened.** Read the file before reporting.
 - **Escrow-protected files cannot be audited.** If a resource is escrowed (`.fxap` present, encrypted/unreadable source, or `lua54 'yes'` + vendor protection), report those files as **UNAUDITED — escrow-protected**, never as a clean pass. You can only audit unencrypted files and the manifest.
-- **The same rule applies to any code you cannot actually read**: a minified NUI bundle shipped without source, or a tree too large to cover. Report it as **UNAUDITED**, name the files, and never let unread code be implied as clean. UNAUDITED is a separate line in the report, not a deduction and not a pass.
+- **The same rule applies to any code you cannot actually read**: a minified NUI bundle shipped without source, a compiled .NET assembly (`.dll`) in a C# resource, or a tree too large to cover. Report it as **UNAUDITED**, name the files, and never let unread code be implied as clean. UNAUDITED is a separate line in the report, not a deduction and not a pass.
 - **State your confidence honestly at the end.** "No backdoor found" is a different claim from "clean", and on an untrusted or partly-unreadable resource it is the only one you can make.
 
 ## Audit Workflow
